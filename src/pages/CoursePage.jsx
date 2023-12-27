@@ -1,0 +1,197 @@
+/*******************************
+* File Name: CoursePage.jsx   *
+* Author: Ammar S.A.A          *
+* Output: Course Order Page   *
+*******************************/
+
+import React, { useContext, useEffect, useState } from "react";
+import Carousel from "react-bootstrap/Carousel";
+import { useParams } from "react-router-dom";
+import Swal from "sweetalert2";
+import StarRatings from "react-star-ratings";
+import { getCourse } from "../services/apiService";
+import { GlobalContext } from '../Context/context';
+import Comment from "../components/Comments";
+import { BsCartPlusFill } from 'react-icons/bs'
+import Cart from '../components/Cart'
+import { Button } from "react-bootstrap";
+import { BsCart4 } from "react-icons/bs";
+
+export default function CoursePage() {
+  const [count, setCount] = useState(1);
+  const { courseId } = useParams();
+  const [course, setCourse] = useState({});
+
+
+  // Context APi data transfering
+
+  let { state, dispatch } = useContext(GlobalContext); // It's similar to the state with the replacement of setProperty to dispatch
+
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const courseData = await getCourse(courseId);
+        setCourse(courseData);
+      } catch (error) {
+        console.log(error);
+      }
+    };
+
+    fetchData();
+  }, [courseId]);
+
+  const addToCart = () => {
+    if (count <= 0) {
+      Swal.fire({
+        title: "Error!",
+        text: "Please select a valid quantity",
+        icon: "error",
+        confirmButtonText: "Close",
+      });
+      return;
+    }
+
+    const item = { ...course, count };
+    dispatch({
+      type: "ADD_TO_CART",
+      payload: item,
+    });
+
+
+    console.log(item);
+    Swal.fire({
+      title: "Success!",
+      text: "Added to Cart Successfully",
+      icon: "success",
+      confirmButtonText: "Close",
+    });
+  };
+
+  const placeOrder = () => {
+    if (count <= 0) {
+      Swal.fire({
+        title: "Error!",
+        text: "Please select a valid quantity",
+        icon: "error",
+        confirmButtonText: "Close",
+      });
+      return;
+    }
+
+    const item = { ...course, count };
+    console.log(item);
+    // Swal.fire({
+    //   title: "Success!",
+    //   text: "Order Placed Successfully",
+    //   icon: "success",
+    //   confirmButtonText: "Close",
+    // });
+    const swalWithBootstrapButtons = Swal.mixin({
+      customClass: {
+        confirmButton: 'btn btn-success mx-2',
+        cancelButton: 'btn btn-danger'
+      },
+      buttonsStyling: false
+    })
+
+    swalWithBootstrapButtons.fire({
+      title: 'Are you sure?',
+      text: "You won't be able to revert this!",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, Order it!',
+      cancelButtonText: 'No, cancel!',
+      reverseButtons: true
+    }).then((result) => {
+      if (result.isConfirmed) {
+        swalWithBootstrapButtons.fire(
+          'Order Place Successfully!',
+          'Your order has been placed.',
+          'success'
+        )
+      } else if (
+        /* Read more about handling dismissals below */
+        result.dismiss === Swal.DismissReason.cancel
+      ) {
+        swalWithBootstrapButtons.fire(
+          'Cancelled',
+          'Your order is cancel:)',
+          'error'
+        )
+      }
+    })
+  };
+
+  return (
+    <div className="container-fluid">
+      <div className="text-center">
+        <h1 className="mt-5 mb-3">{course.title}</h1>
+      </div>
+
+      <div className="container">
+        <div className="row">
+
+          <div className="col-lg-6 col-md-8 col-sm-10 mx-auto">
+
+            <Carousel>
+              {course?.images?.map((image, index) => (
+                <Carousel.Item key={index}>
+                  <img className="d-block w-100" src={image} style={{ width: '100%', height: '65vh' }} alt={`Slide ${index + 1}`} />
+                </Carousel.Item>
+              ))}
+            </Carousel>
+          </div>
+          <div className="col-lg-6 col-md-8 col-sm-10 mx-auto p-4">
+            <div>
+              <p className="color-secondary"><b>Description</b>: {course.description}</p>
+              <p>
+                <b>Price:</b> $<del>{course.price}</del> - <ins>{course.discountPercentage}</ins>
+              </p>
+              <div className="d-flex align-items-center mb-2">
+                <StarRatings
+                  rating={course.rating}
+                  starRatedColor="#ffc107"
+                  starEmptyColor="#e4e5e9"
+                  numberOfStars={5}
+                  starDimension="20px"
+                  starSpacing="2px"
+                />
+                <span className="ms-2 mt-2">{course.rating}</span>
+              </div>
+              <p><b>Stock Left:</b> {course.stock}</p>
+              <div className="row col-6">
+                <div className="btn-group">
+                  <button
+                    className="btn btn-outline-danger me-2 px-4 d-flex align-items-center gap-2"
+                    onClick={() => setCount((prevCount) => Math.max(prevCount - 1, 0))}
+                  >
+                    -
+                  </button>
+                  <div className="m-2">{count}</div>
+                  <button
+                    className="btn btn-outline-primary ms-2 px-4 d-flex align-items-center gap-2"
+                    onClick={() => setCount((prevCount) => prevCount + 1)}
+                  >
+                    +
+                  </button>
+                </div>
+                <div className="mt-3">
+                  <Button variant="light" className="custom-button d-flex align-items-center gap-2" href="#" onClick={addToCart}>
+                    <BsCartPlusFill className="navbar-icon text-white" />
+                    <span className="d-block d-lg-inline text-white">Add To Cart</span>
+                  </Button>
+                  <Button variant="light" className="custom-button d-flex align-items-center gap-2" href="#">
+                    <BsCart4 className="navbar-icon text-white" />
+                    <span className="d-block d-lg-inline text-white"><Cart /></span>
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <Comment />
+      </div>
+    </div>
+  );
+}
